@@ -80,7 +80,6 @@ def team_match_stats(soup):
     for game in game_id:
         if game.get('data-game-id') == 'all':
             game_id.remove(game)
-    #print(game_id)
     for game in game_id:
         players_hrefs = game.find_all("a", href=True)
         players_name = game.find_all(class_="text-of")
@@ -91,12 +90,10 @@ def team_match_stats(soup):
         for image in players_agents_images:
                 if (image.get("title")):
                     players_agents.append(image.get("title"))
-        #print(players_agents)
         players_kills = game.find_all(class_="mod-stat mod-vlr-kills")
         players_deaths = game.find_all(class_="mod-stat mod-vlr-deaths")
         players_assists = game.find_all(class_="mod-stat mod-vlr-assists")
         game_score = f"{game.find_all(class_='score')[0].text}: {game.find_all(class_='score')[1].text}"
-        #print(game_score)
         rounds_played = int(game.find_all(class_='score')[0].text) + int(game.find_all(class_='score')[1].text)
         
         players_adrs = game.find_all(class_="stats-sq mod-combat")
@@ -104,13 +101,10 @@ def team_match_stats(soup):
             try: 
                 player_name = RequestString(players_name[i].text).remove_newlines().remove_tabs()
                 agent = players_agents[i]
-                #print(agent)
-                #print(players_agents[i])
                 kills = RequestString(players_kills[i].text).strip().split("\n")[0]
                 deaths =  RequestString(players_deaths[i].find(class_="stats-sq").text).replace('/', '').strip().split("\n")[0]
                 assists = RequestString(players_assists[i].text).strip().split("\n")[0]
                 adr = RequestString(players_adrs[i].text).strip().split("\n")[0]
-                #kpr = RequestString(players_kpr[i].text)
                 playerstats = {"name" :  player_name.strip().lower(), 
                             "link": (players_hrefs[i])['href'],
                             "agent": agent.lower(),
@@ -121,7 +115,8 @@ def team_match_stats(soup):
                             "adr" : int(adr),
                             "kpr": round(float(int(kills) / rounds_played), 2)
                             }
-            except IndexError: 
+            except IndexError:
+                #This helps with issues of missing/incomplete information from vlr 
                 continue
                 
 
@@ -175,28 +170,11 @@ def get_player_infos(id: int)->dict:
                     "twitter" : twitter_link["href"], "twitch" : twitch_link["href"], 
                     "country": RequestString(country[6].text).remove_tabs().remove_newlines()}
 
-#returns array of last 50 matches played by player given the id
-def get_player_matches_by_id(id: int):
-    player_matches_soup = get_soup(PLAYER + MATCHES + str(id))
-    matches_stats  = []
-    matches = player_matches_soup.find_all(class_="wf-card", href=True)
-    for match in matches:
-        divs = match.find_all("div")
-        score = RequestString(match.find(class_="m-item-result").text).remove_newlines().remove_tabs()
-        dateclass = match.find(class_="rm-item-datze")
-        date = RequestString(dateclass.find("div").text).remove_tabs().remove_newlines()
-        team1 = RequestString(divs[3].text).remove_tabs().remove_newlines()
-        team2 = RequestString(divs[10].text).remove_tabs().remove_newlines
-        matches_stats.append({"link": match["href"],"score" : score, "date" : date, "teams": [team1.split("#")[0] ,team2.split("#")[0]]})
-    return matches_stats
-
 def get_player_match_ids(id: int, amount: int = 1):
     match_ids = []
     for i in range(int(amount/50) + 1):
         player_matches_soup = get_soup(PLAYER + MATCHES + str(id) + '/?page=' + str(i+1))
         matches = player_matches_soup.find_all("a", class_="wf-card fc-flex m-item")
-        #print(matches[0].get("href").split('/')[1])
-        #print(len(matches))
         for match in matches:
             match_ids.append(match.get("href").split('/')[1]) 
     return match_ids[0:amount]
