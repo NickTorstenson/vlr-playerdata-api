@@ -3,9 +3,8 @@ import bs4
 import logging
 import json
 import requests
-from requests.api import request
-from datetime import date, datetime
-import typing
+import requests.api
+
 
 
 
@@ -14,6 +13,7 @@ logging.basicConfig(level=logging.DEBUG)
 BASE: str = "https://www.vlr.gg/"
 MATCHES: str = "matches/"
 RANKINGS: str= "rankings/"
+TEAM: str= "team/"
 NEWS: str = "news/"
 FORUMS: str = "forum/"
 PLAYER: str = "player/"
@@ -45,41 +45,41 @@ def get_soup(address :str):
     else:
         return soup
 
-def match_team_names(soup)-> tuple:
-    team_names = [name.text for name in soup.find_all(class_="match-item-vs-team-name")] 
-    return (team_names[0], team_names[1])
+# def match_team_names(soup)-> tuple:
+#     team_names = [name.text for name in soup.find_all(class_="match-item-vs-team-name")] 
+#     return (team_names[0], team_names[1])
 
-#returns scores about live or past matches 
-def get_matches_by_status(status: str):
-    matches_soup = get_soup(MATCHES)
-    live_matches = matches_soup.find_all(class_="wf-module-item") 
-    matches_by_status = []
-    for match in live_matches:
-        #checks if there is any match with the corresponding status
-        match_status = RequestString(match.find(class_="ml-status").text) 
-        match_status.remove_newlines().remove_tabs()
-        if  match_status.lower() != status:
-            pass
-        else:
-            scores = match.find_all(class_="match-item-vs-team-score")
-            series = RequestString(match.find(class_="match-item-event-series").text)
-            tournament_name = RequestString((match.find(class_="match-item-event").text).replace(series, ""))
-            series.remove_tabs().remove_newlines()
-            single_match = {"teams" : [RequestString(team).remove_newlines().remove_tabs() for team in match_team_names(match)], 
-                            "time" :  RequestString(match.find(class_="match-item-time").text).remove_newlines().remove_tabs(),
-                            # grabs info about the tournament, 
-                            "series" : series,
-                            #since there is no way to get the tournament directly, first it grabs tournament and series, then removes the series
-                            "tournament": tournament_name.remove_tabs().remove_newlines()
-                            } 
-            if (status == "live"):
-                single_match["score"] = RequestString(scores[0].text).remove_newlines().remove_tabs() 
-                + ":" + RequestString(scores[1].text).remove_newlines().remove_tabs()
-            matches_by_status.append(single_match)
-    if (len(matches_by_status) == 0):
-        return f"No {status} matches at the moment"
-    else:
-        return matches_by_status
+# #returns scores about live or past matches 
+# def get_matches_by_status(status: str):
+#     matches_soup = get_soup(MATCHES)
+#     live_matches = matches_soup.find_all(class_="wf-module-item") 
+#     matches_by_status = []
+#     for match in live_matches:
+#         #checks if there is any match with the corresponding status
+#         match_status = RequestString(match.find(class_="ml-status").text) 
+#         match_status.remove_newlines().remove_tabs()
+#         if  match_status.lower() != status:
+#             pass
+#         else:
+#             scores = match.find_all(class_="match-item-vs-team-score")
+#             series = RequestString(match.find(class_="match-item-event-series").text)
+#             tournament_name = RequestString((match.find(class_="match-item-event").text).replace(series, ""))
+#             series.remove_tabs().remove_newlines()
+#             single_match = {"teams" : [RequestString(team).remove_newlines().remove_tabs() for team in match_team_names(match)], 
+#                             "time" :  RequestString(match.find(class_="match-item-time").text).remove_newlines().remove_tabs(),
+#                             # grabs info about the tournament, 
+#                             "series" : series,
+#                             #since there is no way to get the tournament directly, first it grabs tournament and series, then removes the series
+#                             "tournament": tournament_name.remove_tabs().remove_newlines()
+#                             } 
+#             if (status == "live"):
+#                 single_match["score"] = RequestString(scores[0].text).remove_newlines().remove_tabs() 
+#                 + ":" + RequestString(scores[1].text).remove_newlines().remove_tabs()
+#             matches_by_status.append(single_match)
+#     if (len(matches_by_status) == 0):
+#         return f"No {status} matches at the moment"
+#     else:
+#         return matches_by_status
     
 
 #returns useful information on a match, given the id
@@ -96,13 +96,15 @@ def get_match_by_id(id: int)-> dict:
     total_score = RequestString(match_soup.find(class_="js-spoiler").text)
     total_score.remove_tabs() 
     total_score.remove_newlines() 
-    teams = [RequestString(result.text).remove_newlines() for result in match_soup.find_all(class_="wf-title-med")]
+    teams = [RequestString(result.text).strip('\n').strip('\t') for result in match_soup.find_all(class_="wf-title-med")]
     match_info: dict = {
         "link": BASE + str(id), 
-        "id" : id, "event" : RequestString(event).remove_newlines(), 
-        "teams" : teams, "score": total_score, 
-        "date" : date,
-        "match_style": match_style,
+        "id" : id, 
+        "event" : RequestString(event).strip('\n').strip('\t').replace('\t', ''), 
+        "teams" : teams, 
+        "score": total_score.strip('\n').strip('\t').replace('\t', '').replace('\n', ''), 
+        "date" : date.strip('\n').strip('\t'),
+        "match_style": match_style.strip('\n').strip('\t'),
         "players_stats" : team_match_stats(match_soup)
     }
     return match_info
@@ -111,23 +113,56 @@ def get_match_by_id(id: int)-> dict:
 def team_match_stats(soup):
     match_stats = []
     stats_tab = soup.find(class_="vm-stats-container")
-    players_hrefs = stats_tab.find_all("a", href=True)
-    players_name = stats_tab.find_all(class_="text-of")
-    players_kills = stats_tab.find_all(class_="mod-stat mod-vlr-kills")
-    players_deaths = stats_tab.find_all(class_="mod-stat mod-vlr-deaths")
-    players_assists = stats_tab.find_all(class_="mod-stat mod-vlr-assists")
-    players_adrs = stats_tab.find_all(class_="stats-sq mod-combat")
-    for i in range(10):
-        player_name = RequestString(players_name[i].text).remove_newlines().remove_tabs()
-        kills = RequestString(players_kills[i].text).remove_newlines().remove_tabs()
-        deaths =  RequestString(players_deaths[i].find(class_="stats-sq").text).remove_newlines()
-        assists = RequestString(players_assists[i].text).remove_newlines().remove_tabs()
-        adr = RequestString(players_adrs[i].text).remove_tabs().remove_tabs()
-        playerstats = {"name" :  player_name.strip(), "link": (players_hrefs[i])['href'],
-                       "kills" : int(kills),  "deaths": int(deaths.replace("/", "")),
-                       "assists": int(assists), "adr" : float(adr)
-                       }
-        match_stats.append(playerstats)
+    game_id = stats_tab.find_all(class_="vm-stats-game")
+    for game in game_id:
+        if game.get('data-game-id') == 'all':
+            game_id.remove(game)
+    #print(game_id)
+    for game in game_id:
+        players_hrefs = game.find_all("a", href=True)
+        players_name = game.find_all(class_="text-of")
+        map_div = game.find(class_='map')
+        map = map_div.find('span', style='position: relative;').text.replace("PICK", '').replace('\n', '').replace('\t', '')
+        players_agents_images = game.find_all('img')
+        players_agents = []
+        for image in players_agents_images:
+                if (image.get("title")):
+                    players_agents.append(image.get("title"))
+        #print(players_agents)
+        players_kills = game.find_all(class_="mod-stat mod-vlr-kills")
+        players_deaths = game.find_all(class_="mod-stat mod-vlr-deaths")
+        players_assists = game.find_all(class_="mod-stat mod-vlr-assists")
+        game_score = f"{game.find_all(class_='score')[0].text}: {game.find_all(class_='score')[1].text}"
+        #print(game_score)
+        rounds_played = int(game.find_all(class_='score')[0].text) + int(game.find_all(class_='score')[1].text)
+        
+        players_adrs = game.find_all(class_="stats-sq mod-combat")
+        for i in range(10):
+            try: 
+                player_name = RequestString(players_name[i].text).remove_newlines().remove_tabs()
+                agent = players_agents[i]
+                #print(agent)
+                #print(players_agents[i])
+                kills = RequestString(players_kills[i].text).strip().split("\n")[0]
+                deaths =  RequestString(players_deaths[i].find(class_="stats-sq").text).replace('/', '').strip().split("\n")[0]
+                assists = RequestString(players_assists[i].text).strip().split("\n")[0]
+                adr = RequestString(players_adrs[i].text).strip().split("\n")[0]
+                #kpr = RequestString(players_kpr[i].text)
+                playerstats = {"name" :  player_name.strip().lower(), 
+                            "link": (players_hrefs[i])['href'],
+                            "agent": agent.lower(),
+                            "map": map.lower(),
+                            "kills" : int(kills),  
+                            "deaths": int(deaths),
+                            "assists": int(assists), 
+                            "adr" : int(adr),
+                            "kpr": round(float(int(kills) / rounds_played), 2)
+                            }
+            except IndexError: 
+                continue
+                
+
+            match_stats.append(playerstats)
     return match_stats
 
 #gets information about the top n, with default to global (as a region). Other regions can be specified and passed as a string
@@ -191,9 +226,38 @@ def get_player_matches_by_id(id: int):
         team2 = RequestString(divs[10].text).remove_tabs().remove_newlines
         matches_stats.append({"link": match["href"],"score" : score, "date" : date, "teams": [team1.split("#")[0] ,team2.split("#")[0]]})
     return matches_stats
+
+def get_player_match_ids(id: int, amount: int = 1):
+    match_ids = []
+    for i in range(int(amount/50) + 1):
+        player_matches_soup = get_soup(PLAYER + MATCHES + str(id) + '/?page=' + str(i+1))
+        matches = player_matches_soup.find_all("a", class_="wf-card fc-flex m-item")
+        #print(matches[0].get("href").split('/')[1])
+        #print(len(matches))
+        for match in matches:
+            match_ids.append(match.get("href").split('/')[1]) 
+    return match_ids[0:amount]
+
+def get_team_match_ids(id: int, amount: int = 1):
+    match_ids = []
+    for i in range(int(amount/50) + 1):
+        player_matches_soup = get_soup(TEAM + MATCHES + str(id) + '/?page=' + str(i+1))
+        matches = player_matches_soup.find_all("a", class_="wf-card fc-flex m-item")
+        for match in matches:
+            match_ids.append(match.get("href").split('/')[1]) 
+    return match_ids[0:amount]
+
     
-def to_json(filename: str , object: dict, indent=4):
-    f = open(f"{filename}.json", "w")
-    json_object = json.dumps(object, indent=indent)
-    f.write(json_object)
-    f.close()
+#makes a json of the specified file name
+# def to_json(filename: str , object: dict, indent=4):
+#     f = open(f"{filename}.json", "w")
+#     json_object = json.dumps(object, indent=indent)
+#     f.write(json_object)
+#     f.close()
+
+def to_json(filename: str, data: dict, indent=4, append=False):
+    with open(f"{filename}.json", "a") as f:
+        json.dump(data, f, indent=indent)
+        f.write('\n')  # Add a newline after each JSON object for readability
+
+
