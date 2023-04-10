@@ -123,40 +123,6 @@ def team_match_stats(soup):
             match_stats.append(playerstats)
     return match_stats
 
-#gets information about the top n, with default to global (as a region). Other regions can be specified and passed as a string
-def get_top_n(number: int=30, region: str=""):
-    rankings_soup = get_soup(RANKINGS + region)
-    teams = rankings_soup.find_all(class_="rank-item wf-card fc-flex")
-    teams_array = []
-    for i in range(number):
-        team_name = RequestString(teams[i].find(class_="ge-text").text).remove_newlines().remove_tabs().string
-        team_country = RequestString(teams[i].find(class_="rank-item-team-country").text).remove_tabs().remove_newlines()
-        team_name = team_name.replace(team_country, "") #removes the country from the team name
-        team_ranking = RequestString(teams[i].find(class_="rank-item-rank").text).remove_tabs().remove_newlines().string
-        ratings_arr = teams[i].find_all(class_="rank-item-rating")
-        streak = RequestString(teams[i].find(class_="rank-item-streak mod-right").text).remove_newlines().remove_tabs()
-        teams_array.append({"team": team_name,
-                            "country": team_country,
-                            "ranking": int(team_ranking), "rating": int(ratings_arr[0].text),
-                            "form": int(ratings_arr[1].text), "ach": int(ratings_arr[2].text),
-                            "streak": streak})
-    return teams_array 
-    #could add winnings and last played, but is functional
-
-#gets basic info about news  such as title, comments and time passed.
-def get_news(page=1):
-    news_soup = get_soup(NEWS+ f"?page={page}")
-    news_list = news_soup.find_all(class_="wf-module-item", href=True) 
-    news_array = []
-    for article in news_list:
-        divs = article.find_all("div")
-        title = RequestString(divs[1].text).remove_newlines().remove_tabs()
-        description = RequestString(divs[2].text).remove_newlines().remove_tabs()
-        bot_row = (article.find_next(class_="ge-text-light").text).split("\u2022") # splits the string using the escape for the bullet (u+2022) 
-        news_array.append({"title": title, "description" : description, "link": article['href'],
-                           "author" : RequestString(bot_row[2]).remove_tabs().remove_newlines(), "date" : bot_row[1]})
-    return news_array
-
 #gets player infos from personal page
 def get_player_infos(id: int)->dict:
     player_soup = get_soup(PLAYER +  str(id))
