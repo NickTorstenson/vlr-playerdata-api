@@ -105,6 +105,8 @@ def team_match_stats(soup):
                 deaths =  RequestString(players_deaths[i].find(class_="stats-sq").text).replace('/', '').strip().split("\n")[0]
                 assists = RequestString(players_assists[i].text).strip().split("\n")[0]
                 adr = RequestString(players_adrs[i].text).strip().split("\n")[0]
+                if adr == '':
+                    adr = -1
                 playerstats = {"name" :  player_name.strip().lower(), 
                             "link": (players_hrefs[i])['href'],
                             "agent": agent.lower(),
