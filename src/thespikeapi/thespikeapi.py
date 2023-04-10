@@ -45,43 +45,6 @@ def get_soup(address :str):
     else:
         return soup
 
-# def match_team_names(soup)-> tuple:
-#     team_names = [name.text for name in soup.find_all(class_="match-item-vs-team-name")] 
-#     return (team_names[0], team_names[1])
-
-# #returns scores about live or past matches 
-# def get_matches_by_status(status: str):
-#     matches_soup = get_soup(MATCHES)
-#     live_matches = matches_soup.find_all(class_="wf-module-item") 
-#     matches_by_status = []
-#     for match in live_matches:
-#         #checks if there is any match with the corresponding status
-#         match_status = RequestString(match.find(class_="ml-status").text) 
-#         match_status.remove_newlines().remove_tabs()
-#         if  match_status.lower() != status:
-#             pass
-#         else:
-#             scores = match.find_all(class_="match-item-vs-team-score")
-#             series = RequestString(match.find(class_="match-item-event-series").text)
-#             tournament_name = RequestString((match.find(class_="match-item-event").text).replace(series, ""))
-#             series.remove_tabs().remove_newlines()
-#             single_match = {"teams" : [RequestString(team).remove_newlines().remove_tabs() for team in match_team_names(match)], 
-#                             "time" :  RequestString(match.find(class_="match-item-time").text).remove_newlines().remove_tabs(),
-#                             # grabs info about the tournament, 
-#                             "series" : series,
-#                             #since there is no way to get the tournament directly, first it grabs tournament and series, then removes the series
-#                             "tournament": tournament_name.remove_tabs().remove_newlines()
-#                             } 
-#             if (status == "live"):
-#                 single_match["score"] = RequestString(scores[0].text).remove_newlines().remove_tabs() 
-#                 + ":" + RequestString(scores[1].text).remove_newlines().remove_tabs()
-#             matches_by_status.append(single_match)
-#     if (len(matches_by_status) == 0):
-#         return f"No {status} matches at the moment"
-#     else:
-#         return matches_by_status
-    
-
 #returns useful information on a match, given the id
 #should work, but needs to add check if the matches are actually being played live
 def get_match_by_id(id: int)-> dict:
@@ -246,14 +209,6 @@ def get_team_match_ids(id: int, amount: int = 1):
         for match in matches:
             match_ids.append(match.get("href").split('/')[1]) 
     return match_ids[0:amount]
-
-    
-#makes a json of the specified file name
-# def to_json(filename: str , object: dict, indent=4):
-#     f = open(f"{filename}.json", "w")
-#     json_object = json.dumps(object, indent=indent)
-#     f.write(json_object)
-#     f.close()
 
 def to_json(filename: str, data: dict, indent=4, append=False):
     with open(f"{filename}.json", "a") as f:
