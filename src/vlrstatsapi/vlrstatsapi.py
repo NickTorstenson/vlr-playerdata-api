@@ -126,7 +126,7 @@ def match_stats(soup):
                     opponent_team_id = team_ids[1]
                     player_team_elo = team_elos[0]
                     opponent_team_elo = team_elos[1]
-                elif i > 5:
+                elif i >= 5:
                     player_team = team_names[1]
                     opponent_team = team_names[0]
                     player_team_id = team_ids[1]
@@ -143,7 +143,7 @@ def match_stats(soup):
                     adr = -1
                 playerstats = {"name" :  player_name.strip().lower(), 
                             "link": (players_hrefs[i])['href'],
-                            "player id": (players_hrefs[i])['href'].split('/')[1],
+                            "player id": (players_hrefs[i])['href'].split('/')[2],
                             "team":player_team,
                             "team id": player_team_id,
                             "team elo": player_team_elo,
@@ -157,7 +157,7 @@ def match_stats(soup):
                             "assists": int(assists), 
                             "adr" : int(adr),
                             "kpr": round(float(int(kills) / rounds_played), 2),
-                            "rounds_played": rounds_played
+                            "rounds played": rounds_played
                             }
             except IndexError:
                 #This helps with issues of missing/incomplete information from vlr 
