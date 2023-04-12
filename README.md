@@ -1,5 +1,5 @@
-# thespike-api
-Unofficial JSON API for the valorant website vlr.gg 
+# vlr-playerdata-api
+Unofficial JSON API for the valorant website vlr.gg
 
 ## installation:
 clone the repo  and install the package locally with respectively: 
