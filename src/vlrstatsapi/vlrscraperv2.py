@@ -49,15 +49,16 @@ def get_game_soups(id):
     soup = get_soup(str(id))
     stat_tab = soup.find(class_="vm-stats-container")
     game_soups = stat_tab.find_all(class_="vm-stats-game")
-    for game in game_soups:
-        if game.get('data-game-id') == 'all':
-            game_soups.remove(game)
+    i = 0
+    while i < len(game_soups):
+        if game_soups[i].get('data-game-id') == 'all' or get_game_map(game_soup=game_soups[i]) == 'TBD':
+            del game_soups[i]
+        else:
+            i += 1
     return game_soups
 
 def add_player_to_dataFrame(dataframe, player): 
     dataframe.append(player)
-
-
 
 #returns match data for players specified, if all_players - returns all player data from matches
 def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_players=True):
@@ -100,6 +101,7 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
 
     # Looping through each match in the match_id list
         # Sets the information that doesnt through map/players
+    match_num = 1
     for match_id in match_ids:
         match_soup = get_soup(str(match_id))
         game_soups = get_game_soups(match_id)
@@ -110,7 +112,8 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
         team_name_long = get_team_names_long(soup=match_soup)
         team_id = get_team_ids(soup=match_soup)
         team_elo = get_team_elos(soup=match_soup)
-
+        print(f'MATCH {match_num}/{len(match_ids)}')
+        match_num+=1
         # Looping through each map in a series (match)
             # Sets the information that changes between maps
             # creates lists for each variable in order of players retrieved
@@ -172,7 +175,7 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
                     player_kills[index],
                     player_deaths[index],
                     player_assists[index],
-                    round(player_kills[index] / rounds_played[index], 2),
+                    round(player_kills[index] / int(rounds_played), 2),
                     player_opponent_id,
                     player_opponent_long,
                     player_opponent_short,
