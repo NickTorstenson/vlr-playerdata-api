@@ -45,9 +45,10 @@ def get_soup(address :str):
         return soup
 
 # Retrieves a list of bs4 strings for each map, removes match summary
-def get_game_soups(id):
-    soup = get_soup(str(id))
-    stat_tab = soup.find(class_="vm-stats-container")
+def get_game_soups(id=id, match_soup=None):
+    if match_soup is None:
+        match_soup = get_soup(str(id))
+    stat_tab = match_soup.find(class_="vm-stats-container")
     game_soups = stat_tab.find_all(class_="vm-stats-game")
     i = 0
     while i < len(game_soups):
@@ -104,8 +105,8 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
     match_num = 1
     for match_id in match_ids:
         match_soup = get_soup(str(match_id))
-        game_soups = get_game_soups(match_id)
-        match_date = get_match_date(match_id)
+        game_soups = get_game_soups(match_soup=match_soup)
+        match_date = get_match_date(match_soup=match_soup)
         match_style = get_match_style(soup=match_soup)
         match_event = get_match_event(soup=match_soup)
         match_score = get_match_score(soup=match_soup)
@@ -194,10 +195,10 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
     return data_frame
 
 # Returns the date of the match
-def get_match_date(id=None, soup=None)->str:
-    if soup is None:
-        soup = get_soup(str(id))
-    date = RequestString(soup.find(class_="moment-tz-convert").text)
+def get_match_date(id=None, match_soup=None)->str:
+    if match_soup is None:
+        match_soup = get_soup(str(id))
+    date = RequestString(match_soup.find(class_="moment-tz-convert").text)
     date.remove_newlines() 
     date.remove_tabs() 
     return date.strip('\n').strip('\t')
