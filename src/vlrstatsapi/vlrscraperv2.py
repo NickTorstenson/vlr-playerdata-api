@@ -119,6 +119,9 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
             # Sets the information that changes between maps
             # creates lists for each variable in order of players retrieved
         for i, game_soup in enumerate(game_soups):
+            #not including games that are less than 10 players because they shouldnt exist
+            if len(player_names) < 10:
+                continue
             game_index = i
             team_name_short = get_team_names_short(game_soup=game_soup)
             player_id = get_player_ids(game_soups[i])
