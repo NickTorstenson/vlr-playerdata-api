@@ -176,7 +176,7 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
                     player_kills[index],
                     player_deaths[index],
                     player_assists[index],
-                    round(player_kills[index] / int(rounds_played), 2),
+                    player_kpr,
                     player_opponent_id,
                     player_opponent_long,
                     player_opponent_short,
@@ -305,7 +305,10 @@ def get_player_kills(game_soup=None):
     player_kills_html = game_soup.find_all(class_="mod-stat mod-vlr-kills")
     player_kills = []
     for htelement in player_kills_html:
-        player_kills.append(int(RequestString(htelement.text).strip().split("\n")[0]))
+        if RequestString(htelement.text).strip().split("\n")[0] == '':
+            player_kills.append('***')
+        else:
+            player_kills.append(int(RequestString(htelement.text).strip().split("\n")[0]))
     return player_kills
 
 # Returns a list of death # in a map, in retrieved order from vlr
@@ -313,7 +316,10 @@ def get_player_deaths(game_soup=None):
     player_deaths_html = game_soup.find_all(class_="mod-stat mod-vlr-deaths")
     player_deaths = []
     for htelement in player_deaths_html:
-        player_deaths.append(int(RequestString(htelement.find(class_="stats-sq").text).replace('/', '').strip().split("\n")[0]))
+        if RequestString(htelement.find(class_="stats-sq").text).replace('/', '').strip().split("\n")[0] == '':
+            player_deaths.append('***')
+        else:
+            player_deaths.append(int(RequestString(htelement.find(class_="stats-sq").text).replace('/', '').strip().split("\n")[0]))
     return player_deaths
 
 # Returns a list of assist # in a map, in retrieved order from vlr
@@ -321,7 +327,10 @@ def get_player_assists(game_soup=None):
     player_assists_html = game_soup.find_all(class_="mod-stat mod-vlr-assists")
     player_assists = []
     for htelement in player_assists_html:
-        player_assists.append(int(RequestString(htelement.text).strip().split("\n")[0]))
+        if RequestString(htelement.text).strip().split("\n")[0] == '':
+            player_assists.append('***')
+        else:
+            player_assists.append(int(RequestString(htelement.text).strip().split("\n")[0]))
     return player_assists
 
 # Returns the score of an individual map (13:7) (Team1 Score, Team2 Score)
@@ -354,6 +363,9 @@ def get_player_adrs(game_soup=None):
 def get_player_agents(game_soup=None):
     players_agents_images = game_soup.find_all('img')
     players_agents = []
+    if len(players_agents_images) < 10:
+        for i in range(0,10):
+            players_agents.append('***')
     for image in players_agents_images:
         if (image.get("title")):
             players_agents.append(image.get("title"))
