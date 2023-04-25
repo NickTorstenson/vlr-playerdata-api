@@ -5,6 +5,7 @@ import json
 import requests
 import requests.api
 import pandas as pd
+from bs4 import BeautifulSoup
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -61,8 +62,8 @@ def get_game_soups(id=id, match_soup=None):
 def add_player_to_dataFrame(dataframe, player): 
     dataframe.append(player)
 
-#returns match data for players specified, if all_players - returns all player data from matches
-def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_players=True):
+#returns match data for players specified, if all_players - returns all player data from matches, returns the match_soups in a list as well
+def get_match_player_data(match_ids : list, dataset=None, soups_file=''):
     # Defining the columns for the dataset
     columns = [
                 'match_id',
@@ -93,6 +94,7 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
         ]
     data_frame = pd.DataFrame(columns=columns)
 
+    # Finding matches that have already been scraped into a dataset, only includes new matches to scrape
     used_match_ids = []
     if dataset is not None:
         used_match_ids = dataset['match_id'].drop_duplicates().to_list()
@@ -100,11 +102,34 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
         match_ids = [match for match in match_ids if match not in used_match_ids]
         print(f'DATASET DETECTED APPPENDING {len(match_ids)} MATCHES')
 
+    # Match Count for progress
+    match_num = 1
+    
+    # Handling loading the stored soups into a list
+    stored_soups = None
+    try:
+        print(f"Loading saved soup file: {soups_file}")
+        stored_soups = pd.read_csv(soups_file)
+        print(stored_soups)
+    except FileNotFoundError:
+        print('No stored soups found.')
+        stored_soups = pd.DataFrame(stored_soups, columns=['match_id', 'soup'])
+        
     # Looping through each match in the match_id list
         # Sets the information that doesnt through map/players
-    match_num = 1
     for match_id in match_ids:
-        match_soup = get_soup(str(match_id))
+        # Getting the index of a match soup by comparing to stored_soup match_id
+        index = stored_soups.loc[stored_soups['match_id'] == int(match_id)].index.tolist()
+        if bool(index):
+            # Making sure the loaded soup is in the bs4 format before going to scraping functions
+            if str(type(stored_soups['soup'][index[0]])) == "<class 'bs4.BeautifulSoup'>":
+                match_soup = stored_soups['soup'][index[0]]
+            else:
+                match_soup = BeautifulSoup(stored_soups['soup'][index[0]], 'html.parser')
+        else: # If there is no match in the stored soups it will look up the match and store to the list for future use
+            match_soup = get_soup(str(match_id))
+            stored_soups.loc[len(stored_soups.index)] = [match_id, match_soup]
+            
         game_soups = get_game_soups(match_soup=match_soup)
         match_date = get_match_date(match_soup=match_soup)
         match_style = get_match_style(soup=match_soup)
@@ -120,12 +145,12 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
             # creates lists for each variable in order of players retrieved
         for i, game_soup in enumerate(game_soups):
             #not including games that are less than 10 players because they shouldnt exist
+            player_names = get_player_names(game_soups[i])
             if len(player_names) < 10:
                 continue
             game_index = i
             team_name_short = get_team_names_short(game_soup=game_soup)
             player_id = get_player_ids(game_soups[i])
-            player_names = get_player_names(game_soups[i])
             player_agent = get_player_agents(game_soups[i])
             map = get_game_map(game_soups[i])
             rounds_played = get_game_rounds_played(game_soups[i])
@@ -195,11 +220,12 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
                 # or a new one
                 else:
                     data_frame.loc[len(data_frame)] = data 
+    
     # Returning the appended dataset
     if dataset is not None:
-        return dataset
+        return dataset, stored_soups
     # or the new one
-    return data_frame
+    return data_frame, stored_soups
 
 # Returns the date of the match
 def get_match_date(id=None, match_soup=None)->str:
