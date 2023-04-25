@@ -155,6 +155,10 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
                     player_opponent_id = team_id[0]
                     player_opponent_elo = team_elo[0]
                 # Building a row for each player
+                if type(player_kills[index]) is str or type(rounds_played) is str:
+                    player_kpr = '***'
+                else:
+                    player_kpr = round(player_kills[index] / int(rounds_played), 2)
                 data = [
                     match_id,
                     match_date,
