@@ -34,8 +34,8 @@ class RequestString(str):
         return self.string
     
 
-#allows bs4 to parse the required address
 def get_soup(address :str) -> BeautifulSoup:
+    """Allows bs4 to parse the required address"""
     request_link: str = BASE + address
     requested = requests.get(request_link)
     logging.debug(f"requesting url: {request_link} : {str(requested)}")
@@ -45,8 +45,8 @@ def get_soup(address :str) -> BeautifulSoup:
     else:
         return soup
 
-# Retrieves a list of bs4 strings for each map, removes match summary
 def get_game_soups(match_id : int = None, match_soup : BeautifulSoup = None) -> list:
+    """Retrieves a list of bs4 strings for each map, removes match summar"""
     if match_soup is None:
         match_soup = get_soup(str(match_id))
     stat_tab = match_soup.find(class_="vm-stats-container")
