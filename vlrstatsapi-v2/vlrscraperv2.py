@@ -35,20 +35,20 @@ class RequestString(str):
     
 
 #allows bs4 to parse the required address
-def get_soup(address :str):
+def get_soup(address :str) -> BeautifulSoup:
     request_link: str = BASE + address
-    re = requests.get(request_link)
-    logging.debug("requesting url: " + request_link + " : " + str(re))
-    soup  = bs4.BeautifulSoup(re.content, 'lxml')
-    if re.status_code == 404:
+    requested = requests.get(request_link)
+    logging.debug(f"requesting url: {request_link} : {str(requested)}")
+    soup  = bs4.BeautifulSoup(requested.content, 'lxml')
+    if requested.status_code == 404:
         return None
     else:
         return soup
 
 # Retrieves a list of bs4 strings for each map, removes match summary
-def get_game_soups(id=id, match_soup=None):
+def get_game_soups(match_id : int = None, match_soup : BeautifulSoup = None) -> list:
     if match_soup is None:
-        match_soup = get_soup(str(id))
+        match_soup = get_soup(str(match_id))
     stat_tab = match_soup.find(class_="vm-stats-container")
     game_soups = stat_tab.find_all(class_="vm-stats-game")
     i = 0
@@ -62,8 +62,11 @@ def get_game_soups(id=id, match_soup=None):
 def add_player_to_dataFrame(dataframe, player): 
     dataframe.append(player)
 
-#returns match data for players specified, if all_players - returns all player data from matches, returns the match_soups in a list as well
 def get_match_player_data(match_ids : list, dataset=None, soups_file=''):
+    """
+        returns match data for players specified, if all_players
+        returns all player data from matches, returns the match_soups in a list as well
+    """
     # Defining the columns for the dataset
     columns = [
                 'match_id',
@@ -132,12 +135,12 @@ def get_match_player_data(match_ids : list, dataset=None, soups_file=''):
             
         game_soups = get_game_soups(match_soup=match_soup)
         match_date = get_match_date(match_soup=match_soup)
-        match_style = get_match_style(soup=match_soup)
-        match_event = get_match_event(soup=match_soup)
-        match_score = get_match_score(soup=match_soup)
-        team_name_long = get_team_names_long(soup=match_soup)
-        team_id = get_team_ids(soup=match_soup)
-        team_elo = get_team_elos(soup=match_soup)
+        match_style = get_match_style(match_soup=match_soup)
+        match_event = get_match_event(match_soup=match_soup)
+        match_score = get_match_score(match_soup=match_soup)
+        team_name_long = get_team_names_long(match_soup=match_soup)
+        team_id = get_team_ids(match_soup=match_soup)
+        team_elo = get_team_elos(match_soup=match_soup)
         print(f'MATCH {match_num}/{len(match_ids)}')
         match_num+=1
         # Looping through each map in a series (match)
@@ -183,7 +186,7 @@ def get_match_player_data(match_ids : list, dataset=None, soups_file=''):
                     player_opponent_id = team_id[0]
                     player_opponent_elo = team_elo[0]
                 # Building a row for each player
-                if type(player_kills[index]) is str or type(rounds_played) is str:
+                if isinstance(player_kills[index], str) or isinstance(rounds_played, str):
                     player_kpr = '***'
                 else:
                     player_kpr = round(player_kills[index] / int(rounds_played), 2)
@@ -227,68 +230,68 @@ def get_match_player_data(match_ids : list, dataset=None, soups_file=''):
     # or the new one
     return data_frame, stored_soups
 
-# Returns the date of the match
-def get_match_date(id=None, match_soup=None)->str:
+def get_match_date(match_id : int = None, match_soup : BeautifulSoup = None)->str:
+    """Returns the date of the match"""
     if match_soup is None:
-        match_soup = get_soup(str(id))
+        match_soup = get_soup(str(match_id))
     date = RequestString(match_soup.find(class_="moment-tz-convert").get('data-utc-ts').split(' ')[0])
     return date.strip('\n').strip('\t')
 
-# Returns the match style (i.e. Bo3)
-def get_match_style(id=None, soup=None)->str:
-    if not soup:
-        soup = get_soup(str(id))
-    match_style = RequestString(soup.find_all(class_="match-header-vs-note")[1].text)
+def get_match_style(match_id : int = None, match_soup : BeautifulSoup = None)->str:
+    """Returns the match style (i.e. Bo3)"""
+    if not match_soup:
+        match_soup = get_soup(str(match_id))
+    match_style = RequestString(match_soup.find_all(class_="match-header-vs-note")[1].text)
     return match_style.strip('\n').strip('\t')
 
-# Returns the event that the match took place in
-def get_match_event(id=None, soup=None)->str:
-    if not soup:
-        soup = get_soup(str(id))
-    return soup.find(class_="match-header-event").text
+def get_match_event(match_id : int = None, match_soup : BeautifulSoup = None)->str:
+    """Returns the event that the match took place in"""
+    if not match_soup:
+        match_soup = get_soup(str(match_id))
+    return match_soup.find(class_="match-header-event").text
 
-# Returns the match score in a string (2:1)
-def get_match_score(id=None, soup=None)->str:
-    if not soup:
-        soup = get_soup(str(id))
-    total_score = RequestString(soup.find(class_="js-spoiler").text)
+def get_match_score(match_id : int = None, match_soup : BeautifulSoup = None)->str:
+    """Returns the match score in a string (2:1)"""
+    if not match_soup:
+        match_soup = get_soup(str(match_id))
+    total_score = RequestString(match_soup.find(class_="js-spoiler").text)
     return total_score.strip('\n').strip('\t').replace('\t', '').replace('\n', '')
 
-# Returns the full team name listed on VLR
-def get_team_names_long(id=None, soup=None)->str:
-    if not soup:
-        soup = get_soup(str(id))
+def get_team_names_long(match_id : int = None, match_soup : BeautifulSoup = None)->list:
+    """Returns the full team names listed on VLR"""
+    if not match_soup:
+        match_soup = get_soup(str(match_id))
     #team_tab = soup.find(class_="match-header-vs")
-    team_names = [RequestString(result.text).strip('\n').strip('\t') for result in soup.find_all(class_="wf-title-med")]
+    team_names = [RequestString(result.text).strip('\n').strip('\t') for result in match_soup.find_all(class_="wf-title-med")]
     return team_names
 
-# Returns shortened versions of the team names
-def get_team_names_short(id=None, game_soup=None):
+def get_team_names_short(match_id : int = None, game_soup : BeautifulSoup = None)->list:
+    """Returns shortened versions of the team names"""
     if game_soup is None:
-        game_soup = get_game_soups(id)[0] #Teams stay the same between maps so using map 1 to determine order is ok
+        game_soup = get_game_soups(match_id)[0] #Teams stay the same between maps so using map 1 to determine order is ok
     player_teams = []
     player_teams_html = game_soup.find_all("a", href=True)
     for htelements in player_teams_html:
         player_teams.append(htelements.text.split('\n')[-2].replace('\t', ''))
     return player_teams
 
-# Returns team ids for a match - [Team1, Team2]
-def get_team_ids(id=None, soup=None):
-    if not soup:
-        soup = get_soup(str(id))
+def get_team_ids(match_id : int = None, match_soup : BeautifulSoup = None)->list:
+    """Returns team ids for a match - [Team1, Team2]"""
+    if not match_soup:
+        match_soup = get_soup(str(match_id))
     team_ids = []
-    team_tab = soup.find(class_="match-header-vs")
+    team_tab = match_soup.find(class_="match-header-vs")
     for i in range(2):
         team_ids.append(int(team_tab.find("a", class_=f"match-header-link wf-link-hover mod-{i+1}").get('href').split('/')[2]))
     return team_ids
 
-# Returns vlr ratings for both teams [Team1, Team2]
-def get_team_elos(id=None, soup=None):
+def get_team_elos(match_id : int = None, match_soup : BeautifulSoup = None)->list:
+    """Returns vlr ratings for both teams [Team1, Team2]"""
     team_elos = []
-    if not soup:
-        soup = get_soup(str(id))
-    team_tab = soup.find(class_="match-header-vs")
-    team_names = [RequestString(result.text).strip('\n').strip('\t') for result in soup.find_all(class_="wf-title-med")]
+    if not match_soup:
+        match_soup = get_soup(str(match_id))
+    team_tab = match_soup.find(class_="match-header-vs")
+    team_names = [RequestString(result.text).strip('\n').strip('\t') for result in match_soup.find_all(class_="wf-title-med")]
     for result in team_tab.find_all(class_="match-header-link-name-elo"):
         if RequestString(result.text).strip('\n').strip('\t').strip('\n').strip('[').strip(']') == '':
             team_elos.append(-1)
@@ -296,12 +299,12 @@ def get_team_elos(id=None, soup=None):
         team_elos.append(int(RequestString(result.text).strip('\n').strip('\t').strip('\n').strip('[').strip(']')))
     return team_elos
 
-# Returns reversed vlr ratings for both teams [Team2, Team1]
-def get_opponent_elos(id=None, soup=None):
+def get_opponent_elos(match_id : int = None, match_soup : BeautifulSoup = None)->list:
+    """Returns reversed vlr ratings for both teams [Team2, Team1]"""
     opponent_elos = []
-    if not soup:
-        soup = get_soup(str(id))
-    team_tab = soup.find(class_="match-header-vs")
+    if not match_soup:
+        match_soup = get_soup(str(match_id))
+    team_tab = match_soup.find(class_="match-header-vs")
     for result in team_tab.find_all(class_="match-header-link-name-elo"):
         if RequestString(result.text).strip('\n').strip('\t').strip('\n').strip('[').strip(']') == '':
             opponent_elos.append(-1)
@@ -309,26 +312,26 @@ def get_opponent_elos(id=None, soup=None):
         opponent_elos.append(int(RequestString(result.text).strip('\n').strip('\t').strip('\n').strip('[').strip(']')))
     return opponent_elos[::-1]
 
-# Returns reversed team ids for both teams [Team2, Team1]
-def get_opponent_ids(id=None, soup=None):
-    if not soup:
-        soup = get_soup(str(id))
+def get_opponent_ids(match_id : int = None, match_soup : BeautifulSoup = None)->list:
+    """Returns reversed team ids for both teams [Team2, Team1]"""
+    if not match_soup:
+        match_soup = get_soup(str(match_id))
     opponent_ids = []
-    team_tab = soup.find(class_="match-header-vs")
+    team_tab = match_soup.find(class_="match-header-vs")
     for i in range(2):
         opponent_ids.append(int(team_tab.find("a", class_=f"match-header-link wf-link-hover mod-{i+1}").get('href').split('/')[2]))
     return opponent_ids[::-1]
 
-# Returns a list of names in a map, in retrieved order from vlr
-def get_player_names(game_soup=None):
+def get_player_names(game_soup : BeautifulSoup = None)->list:
+    """Returns a list of names in a map, in retrieved order from vlr"""
     player_names_html = game_soup.find_all(class_="text-of")
     player_names = []
     for htelement in player_names_html:
         player_names.append(RequestString(htelement.text).split(' ')[0].replace('\t', '').replace('\n', ''))
     return player_names
 
-# Returns a list of kill # in a map, in retrieved order from vlr
-def get_player_kills(game_soup=None):
+def get_player_kills(game_soup : BeautifulSoup = None)->list:
+    """Returns a list of kill # in a map, in retrieved order from vlr"""
     player_kills_html = game_soup.find_all(class_="mod-stat mod-vlr-kills")
     player_kills = []
     for htelement in player_kills_html:
@@ -338,8 +341,8 @@ def get_player_kills(game_soup=None):
             player_kills.append(int(RequestString(htelement.text).strip().split("\n")[0]))
     return player_kills
 
-# Returns a list of death # in a map, in retrieved order from vlr
-def get_player_deaths(game_soup=None):
+def get_player_deaths(game_soup : BeautifulSoup = None)->list:
+    """Returns a list of death # in a map, in retrieved order from vlr"""
     player_deaths_html = game_soup.find_all(class_="mod-stat mod-vlr-deaths")
     player_deaths = []
     for htelement in player_deaths_html:
@@ -349,45 +352,45 @@ def get_player_deaths(game_soup=None):
             player_deaths.append(int(RequestString(htelement.find(class_="stats-sq").text).replace('/', '').strip().split("\n")[0]))
     return player_deaths
 
-# Returns a list of assist # in a map, in retrieved order from vlr
-def get_player_assists(game_soup=None):
+def get_player_assists(game_soup : BeautifulSoup = None)->list:
+    """Returns a list of assist # in a map, in retrieved order from vlr"""
     player_assists_html = game_soup.find_all(class_="mod-stat mod-vlr-assists")
     player_assists = []
     for htelement in player_assists_html:
-        if RequestString(htelement.text).strip().split("\n")[0] == '':
+        if RequestString(htelement.text).strip().split('\n', maxsplit=1)[0] == '':
             player_assists.append('***')
         else:
-            player_assists.append(int(RequestString(htelement.text).strip().split("\n")[0]))
+            player_assists.append(int(RequestString(htelement.text).strip().split('\n', maxsplit=1)[0]))
     return player_assists
 
-# Returns the score of an individual map (13:7) (Team1 Score, Team2 Score)
-def get_game_score(game_soup=None):
+def get_game_score(game_soup : BeautifulSoup = None)->list:
+    """Returns the score of an individual map (13:7) (Team1 Score, Team2 Score)"""
     game_score = f"{game_soup.find_all(class_='score')[0].text}: {game_soup.find_all(class_='score')[1].text}"
     return game_score
 
-# Returns the total amount of rounds played in a map
-def get_game_rounds_played(game_soup=None):
+def get_game_rounds_played(game_soup : BeautifulSoup = None)->int:
+    """Returns the total amount of rounds played in a map"""
     return int(game_soup.find_all(class_='score')[0].text) + int(game_soup.find_all(class_='score')[1].text)
 
-# Returns the map played
-def get_game_map(game_soup=None):
+def get_game_map(game_soup : BeautifulSoup = None)->str:
+    """Returns the map played"""
     map_div = game_soup.find(class_='map')
     map = map_div.find('span', style='position: relative;').text.replace("PICK", '').replace('\n', '').replace('\t', '')
     return map
     
-# Returns a list of adr # in a map, in retrieved order from vlr
-def get_player_adrs(game_soup=None):
+def get_player_adrs(game_soup : BeautifulSoup = None)->list:
+    """Returns a list of adr # in a map, in retrieved order from vlr"""
     player_adr_html = game_soup.find_all(class_="stats-sq mod-combat")
     player_adrs = []
     for htelement in player_adr_html:
-        if RequestString(htelement.text).strip().split("\n")[0] == '':
+        if RequestString(htelement.text).strip().split('\n', maxsplit=1)[0] == '':
             player_adrs.append('***')
         else:
-            player_adrs.append(int(RequestString(htelement.text).strip().split("\n")[0]))
+            player_adrs.append(int(RequestString(htelement.text).strip().split('\n', maxsplit=1)[0]))
     return player_adrs
 
-# Returns a list of agents in a map, in retreived order from vlr
-def get_player_agents(game_soup=None):
+def get_player_agents(game_soup : BeautifulSoup = None)->list:
+    """Returns a list of agents in a map, in retreived order from vlr"""
     players_agents_images = game_soup.find_all('img')
     players_agents = []
     if len(players_agents_images) < 10:
@@ -398,34 +401,34 @@ def get_player_agents(game_soup=None):
             players_agents.append(image.get("title"))
     return players_agents
     
-# Returns a list of player ids in a map, in retrieved order from vlr
-def get_player_ids(game_soup=None):
+def get_player_ids(game_soup : BeautifulSoup = None)->list:
+    """Returns a list of player ids in a map, in retrieved order from vlr"""
     player_ids = []
     player_ids_html = game_soup.find_all("a", href=True)
     for htelements in player_ids_html:
         player_ids.append((htelements)['href'].split('/')[2])
     return player_ids
 
-# Returns a reversed list of short team names in retrieved order
-def get_opponent_name_short(id=None, game_soup=None):
+def get_opponent_name_short(match_id : int = None, game_soup : BeautifulSoup = None)->list:
+    """Returns a reversed list of short team names in retrieved order"""
     if game_soup is None:
-        game_soup = get_game_soups(id)[0] #Teams stay the same between maps so using map 1 to determine order is ok
+        game_soup = get_game_soups(match_id)[0] #Teams stay the same between maps so using map 1 to determine order is ok
     player_teams = []
     player_teams_html = game_soup.find_all("a", href=True)
     for htelements in player_teams_html:
         player_teams.append(htelements.text.split('\n')[-2].replace('\t', ''))
     return player_teams[::-1]
 
-# Returns a reversed list of long team names (Team2, Team1)
-def get_opponent_name_long(id=None, soup=None):
+def get_opponent_name_long(match_id : int = None, soup : BeautifulSoup = None) -> list:
+    """Returns a reversed list of long team names (Team2, Team1)"""
     if not soup:
-        soup = get_soup(str(id))
+        soup = get_soup(str(match_id))
     team_names = [RequestString(result.text).strip('\n').strip('\t') for result in soup.find_all(class_="wf-title-med")]
     return team_names[::-1]
 
-# Gets player info from profile page
-def get_player_infos(id: int)->dict:
-    player_soup = get_soup(PLAYER +  str(id))
+def get_player_infos(player_id: int) -> dict:
+    """Gets player info from profile page"""
+    player_soup = get_soup(PLAYER +  str(player_id))
     header = player_soup.find(class_="wf-card mod-header mod-full") 
     name = header.find(class_="wf-title").text
     real_name = header.find(class_="player-real-name").text
@@ -436,34 +439,32 @@ def get_player_infos(id: int)->dict:
                     "twitter" : twitter_link["href"], "twitch" : twitch_link["href"], 
                     "country": RequestString(country[6].text).remove_tabs().remove_newlines()}
 
-# Fetches a list of match ids from a given number of previous matches
-# user defined length
-def get_player_match_ids(id: int, amount: int = 1):
+def get_player_match_ids(player_id: int, amount: int = 1) -> list:
+    """Fetches a list of match ids from a given number of previous matches user defined length"""
     match_ids = []
     for i in range(int(amount/50) + 1):
-        player_matches_soup = get_soup(PLAYER + MATCHES + str(id) + '/?page=' + str(i+1))
+        player_matches_soup = get_soup(PLAYER + MATCHES + str(player_id) + '/?page=' + str(i+1))
         matches = player_matches_soup.find_all("a", class_="wf-card fc-flex m-item")
         for match in matches:
             match_ids.append(match.get("href").split('/')[1]) 
     return match_ids[0:amount]
 
-# Fetches a list of match ids from previous games a team has played in. 
-# user defined list length
-def get_team_match_ids(id: int, amount: int = 1):
+def get_team_match_ids(team_id: int, amount: int = 1) -> list:
+    """Fetches a list of match ids from previous games a team has played in user defined list length"""
     match_ids = []
     for i in range(int(amount/50) + 1):
-        player_matches_soup = get_soup(TEAM + MATCHES + str(id) + '/?page=' + str(i+1))
+        player_matches_soup = get_soup(TEAM + MATCHES + str(team_id) + '/?page=' + str(i+1))
         matches = player_matches_soup.find_all("a", class_="wf-card fc-flex m-item")
         for match in matches:
             match_ids.append(match.get("href").split('/')[1]) 
     return match_ids[0:amount]
 
-# Converts a python dictionary to json format
-def to_json(filename: str, data: dict, indent=4, append=False):
-    with open(f"{filename}.json", "a") as f:
-        json.dump(data, f, indent=indent)
-        f.write('\n')  # Add a newline after each JSON object for readability
+def to_json(filename: str, data: dict, indent : int = 4, append : bool = False) -> None:
+    """Converts a python dictionary to json format"""
+    with open(file=f"{filename}.json", mode="a") as file:
+        json.dump(data, file, indent=indent)
+        file.write('\n')  # Add a newline after each JSON object for readability
 
-# Converts a pandas datafram to a .csv file
-def to_csv(self : pd.DataFrame, filename='default.csv'):
-    self.to_csv(filename + '.csv', index=False)
+def to_csv(self : pd.DataFrame, filename : str = 'default.csv') -> None:
+    """Converts a pandas datafram to a .csv file"""
+    self.to_csv(f'{filename}.csv', index=False)
