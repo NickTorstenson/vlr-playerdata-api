@@ -205,9 +205,7 @@ def get_match_player_data(match_ids : list, dataset=None, player_ids=None, all_p
 def get_match_date(id=None, match_soup=None)->str:
     if match_soup is None:
         match_soup = get_soup(str(id))
-    date = RequestString(match_soup.find(class_="moment-tz-convert").text)
-    date.remove_newlines() 
-    date.remove_tabs() 
+    date = RequestString(match_soup.find(class_="moment-tz-convert").get('data-utc-ts').split(' ')[0])
     return date.strip('\n').strip('\t')
 
 # Returns the match style (i.e. Bo3)
@@ -215,8 +213,6 @@ def get_match_style(id=None, soup=None)->str:
     if not soup:
         soup = get_soup(str(id))
     match_style = RequestString(soup.find_all(class_="match-header-vs-note")[1].text)
-    match_style.remove_newlines()
-    match_style.remove_tabs()
     return match_style.strip('\n').strip('\t')
 
 # Returns the event that the match took place in
@@ -230,8 +226,6 @@ def get_match_score(id=None, soup=None)->str:
     if not soup:
         soup = get_soup(str(id))
     total_score = RequestString(soup.find(class_="js-spoiler").text)
-    total_score.remove_tabs() 
-    total_score.remove_newlines() 
     return total_score.strip('\n').strip('\t').replace('\t', '').replace('\n', '')
 
 # Returns the full team name listed on VLR
