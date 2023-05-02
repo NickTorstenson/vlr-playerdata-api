@@ -33,7 +33,6 @@ class RequestString(str):
     def __repr__(self) -> str:
         return self.string
     
-
 def get_soup(address :str) -> BeautifulSoup:
     """Allows bs4 to parse the required address"""
     request_link: str = BASE + address
