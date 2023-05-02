@@ -64,12 +64,7 @@ def get_game_soups(match_id : int = None, match_soup : BeautifulSoup = None) -> 
         match_soup = get_soup(str(match_id))
     stat_tab = match_soup.find(class_="vm-stats-container")
     game_soups = stat_tab.find_all(class_="vm-stats-game")
-    i = 0
-    while i < len(game_soups):
-        if game_soups[i].get('data-game-id') == 'all' or get_game_map(game_soup=game_soups[i]) == 'TBD':
-            del game_soups[i]
-        else:
-            i += 1
+    game_soups = [game for game in game_soups if game.get('data-game-id') != 'all' and get_game_map(game_soup=game) != 'TBD']
     return game_soups
 
 def add_player_to_dataFrame(dataframe, player): 
