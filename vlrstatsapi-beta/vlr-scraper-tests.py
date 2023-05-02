@@ -1,6 +1,6 @@
 from datetime import date
 import pandas as pd
-import vlrscraperv2 as vlrs
+import vlrscraperVbeta as vlrs
 import bs4
 
 #sapi.get_match_by_id(183777)

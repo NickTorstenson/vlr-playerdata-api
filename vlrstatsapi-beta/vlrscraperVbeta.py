@@ -1,4 +1,5 @@
 from json import encoder
+from dataclasses import dataclass
 import bs4
 import logging
 import json
@@ -17,6 +18,19 @@ TEAM: str= "team/"
 NEWS: str = "news/"
 FORUMS: str = "forum/"
 PLAYER: str = "player/"
+
+@dataclass(frozen=True, order=True)
+class Player:
+    player_name: str
+    player_id: int
+    player_adr: int
+    player_kills: int
+    player_deaths: int
+    player_assists: int
+    match_id: int
+    date: str
+    
+#player = Player('s0m', 655, 400, 12, 5, 6, 210233, '2023-06-31')
 
 class RequestString(str):
     def __init__(self, string: str) -> None:
