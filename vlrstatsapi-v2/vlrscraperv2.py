@@ -231,7 +231,7 @@ def get_match_player_data(match_ids : list, dataset=None, soups_file=''):
 
 def get_match_date(match_id : int = None, match_soup : BeautifulSoup = None)->str:
     """Returns the date of the match"""
-    if match_soup is None:
+    if not match_soup:
         match_soup = get_soup(str(match_id))
     date = RequestString(match_soup.find(class_="moment-tz-convert").get('data-utc-ts').split(' ')[0])
     return date.strip('\n').strip('\t')
